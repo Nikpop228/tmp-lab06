@@ -7,108 +7,79 @@ on:
     branches: [ "master" ]
 
 jobs:
+    
+  build:
+    runs-on: ${{ matrix.os }}
 
-  ubuntu_build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cpack_flag: DEB
+            extension: deb
+          - os: ubuntu-latest
+            cpack_flag: RPM
+            extension: rpm
+          - os: windows-latest
+            cpack_flag: WIX
+            extension: msi
+          - os: macos-latest
+            cpack_flag: DragNDrop
+            extension: dmg
     
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: sudo apt install rpm
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+      - name: Install dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt install rpm
 
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Release
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-    - name: Create packages
-      working-directory: ${{github.workspace}}/build
-      run: |
-        cpack -G DEB
-        cpack -G RPM
+      - name: Build
+        run: cmake --build build --config Release
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ubuntu-pack
-        path: |
-          build/*.deb
-          build/*.rpm
+      - name: Create packages
+        run: cd build && cpack -G ${{ matrix.cpack_flag }}
 
-  windows_build:
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-${{ matrix.extension }}-pack
+          path: build/*.${{ matrix.extension }}
 
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Release
-
-    - name: Create packages
-      working-directory: ${{github.workspace}}/build
-      run: |
-        cpack -G WIX
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: win-pack
-        path: build/*.msi
-
-  macos_build:
-    runs-on: macos-latest
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Release
-
-    - name: Create packages
-      working-directory: ${{github.workspace}}/build
-      run: |
-        cpack -G DragNDrop
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-pack
-        path: build/*.dmg
-    
   create_release:
-    needs: [ubuntu_build, windows_build, macos_build]
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: download_ubuntu
+    - name: download_ubuntu_deb
       uses: actions/download-artifact@v4
       with:
-        name: ubuntu-pack
+        name: ubuntu-latest-deb-pack
+        path: artifacts/linux
+
+    - name: download_ubuntu_rpm
+      uses: actions/download-artifact@v4
+      with:
+        name: ubuntu-latest-rpm-pack
         path: artifacts/linux
 
     - name: download_windows
       uses: actions/download-artifact@v4
       with:
-        name: win-pack
+        name: windows-latest-msi-pack
         path: artifacts/windows
 
     - name: download_macos
       uses: actions/download-artifact@v4 
       with:
-        name: macos-pack
+        name: macos-latest-dmg-pack
         path: artifacts/macos
 
     - name: Create Release
