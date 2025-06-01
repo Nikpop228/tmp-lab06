@@ -20,6 +20,12 @@ jobs:
           - os: ubuntu-latest
             cpack_flag: RPM
             extension: rpm
+          - os: ubuntu-latest
+            cpack_flag: ZIP
+            extension: zip
+          - os: ubuntu-latest
+            cpack_flag: TGZ
+            extension: tar.gz
           - os: windows-latest
             cpack_flag: WIX
             extension: msi
