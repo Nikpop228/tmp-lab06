@@ -48,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.extension }}-pack
+          name: pack-${{ matrix.extension }}
           path: build/*.${{ matrix.extension }}
 
   create_release:
@@ -56,39 +56,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: download_ubuntu_deb
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - run: mkdir -p artifacts
+    - name: download_artefacts
       uses: actions/download-artifact@v4
-      with:
-        name: ubuntu-latest-deb-pack
-        path: artifacts/linux
-
-    - name: download_ubuntu_rpm
-      uses: actions/download-artifact@v4
-      with:
-        name: ubuntu-latest-rpm-pack
-        path: artifacts/linux
-
-    - name: download_windows
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-latest-msi-pack
-        path: artifacts/windows
-
-    - name: download_macos
-      uses: actions/download-artifact@v4 
-      with:
-        name: macos-latest-dmg-pack
-        path: artifacts/macos
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v1.${{ github.run_number }}
         name: Release v1.${{ github.run_number }}
-        files: |
-          artifacts/linux/*.deb
-          artifacts/linux/*.rpm
-          artifacts/windows/*.msi
-          artifacts/macos/*.dmg
+        files: pack-*/*
